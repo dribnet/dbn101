@@ -1,0 +1,14 @@
+paper 50
+
+load random
+load field
+
+forever 
+{
+   pen <random 100>
+   set a <random 100>
+   set b <random 100>
+   set c <random 100>
+   set d <random 100>
+   <field a b c d>
+}

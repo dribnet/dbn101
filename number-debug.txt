@@ -1,0 +1,51 @@
+// This is boring "test all cases" program
+
+paper 50
+pen 0
+
+// This command is called from numbers and from main
+command drawSquare l t r b
+{
+   line l t r t
+   line l b r b
+   line l t l b
+   line r t r b
+}
+
+// globalCount is maintained (and returned) by drawAndCountLines
+set globalCount 0
+
+// globalXOffset is changed from main, which affects drawAndCountLines
+set globalXOffset 0
+
+// This number is called from the next number
+number hundredMinus n
+{
+   value (100-n)
+}
+
+// This number both draws and returns the total number of lines drawn
+number drawAndCountLines
+{
+   set local <hundredMinus globalCount>
+   drawSquare globalXOffset 60 (globalXOffset+5) 65
+   repeat count 1 3
+   {
+       line globalXOffset (local-count*3) (globalXOffset+10) (local-count*3)
+      set globalCount (globalCount+1)
+   }
+   value globalCount
+}
+
+// This calls drawAndCountLines 4 times.
+// Before each time, the globalXOffset is moved to the right.
+// The return value is stored and bar-charted in white.
+repeat m 0 3
+{
+   pen 100
+   set globalXOffset (m*25)
+   set bar <drawAndCountLines>
+   pen 0
+   drawSquare globalXOffset (bar*4) (globalXOffset+20) 0
+}
+  

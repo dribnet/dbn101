@@ -1,0 +1,5 @@
+public abstract class DBNconnector {
+	public abstract String name;
+	public void set(Vector numbers, int newVal);
+	public int get(Vector numbers);
+}

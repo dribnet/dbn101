@@ -1,0 +1,220 @@
+// JavaCup specification for a simple expression evaluator (w/ actions)
+
+import java_cup.runtime.*;
+import java.io.*;
+import java.util.Vector;
+
+/* Preliminaries to set up and use the scanner.  */
+action code {:
+	public DrawSpace ds;
+	public Vector names = new Vector();
+	public Vector numbers = new Vector();
+	/* This is actionCode */
+:};
+parser code {: 
+	public Yylex yyScan;
+	public int delay=0;
+	public int value = 0;
+	Thread thisThread = Thread.currentThread( );
+	String s;
+	DrawSpace ds;
+	public void setDrawSpace(DrawSpace draw) {this.ds = draw;}
+	public String outputString = new String();
+	public boolean syntaxErrorHappened;
+	public String firstError;
+	public void syntax_error(Symbol cur_token) {
+		String output;
+		
+		output = new String("symbol " + cur_token.sym);
+		if(cur_token.value != null) output = output.concat(", with Object " + cur_token.value);
+		if(cur_token.left != -1) output = output.concat(", with left " + cur_token.left);
+		if(cur_token.right != -1) output = output.concat(", with right " + cur_token.right);
+		output = output.concat(".");
+		if(!syntaxErrorHappened) {
+			syntaxErrorHappened = true;
+			System.err.println("First syntax error: " + output);
+			firstError = new String(output);
+			ds.syntaxError(output);
+		}
+	}
+	String parseString;
+	public void setParseString(String s) {
+		parseString = new String(s);
+	}
+	codeBlock cb=null;
+	public void setCodeBlock(codeBlock pb) {
+		this.cb = cb;
+	}
+	public int getValue() {
+		return value;
+	}
+:};
+init with {:
+	char ch;
+	StringBuffer sb = new StringBuffer();
+	//s = new String(DrawSpace.parseString);
+	StringBufferInputStream strStream = new StringBufferInputStream(parseString);
+	DataInputStream inStream = new DataInputStream(strStream);
+	yyScan = new Yylex(inStream);
+	action_obj.ds = this.ds;
+	syntaxErrorHappened = false;
+:};
+scan with {: 
+	if(delay!=0) {
+		try {thisThread.sleep(delay); }
+		catch (Exception e) {}
+	}
+	return yyScan.tomScan(); 
+:};
+
+/* Terminals (tokens returned by the scanner). */
+terminal			PLUS, MINUS, TIMES, DIVIDE;
+terminal			UMINUS, LPAREN, RPAREN, ALIAS, ANTIALIAS;
+terminal 			RBRACKET, LBRACKET, RBRACE, LBRACE, RBLOCK, LBLOCK;
+terminal			SET, PAPER, PEN, RETURN, REPEAT, FOREVER, LINE, COMMAND;
+terminal			NUMBER, ESCAPE, VALUE, LOAD;
+terminal Integer	INTEGER;
+terminal String		NAME, QUESTION, COMMANDNAME;
+
+/* Non terminals */
+non terminal Object     statement_list, statement, simple_expr_list, name_list;
+non terminal Integer    expr, simple_expr;
+
+/* Precedences */
+precedence left PLUS, MINUS;
+precedence left TIMES, DIVIDE;
+precedence left UMINUS, LPAREN;
+
+/* The grammar */
+statement_list ::= statement RETURN
+		| statement_list statement RETURN
+		| error
+		| RETURN /* do nothing for extra returns */
+		;
+
+statement ::= 
+			SET NAME:n simple_expr:e {: 
+				parser myParser = (parser)CUP$parser$parser;
+				myParser.yyScan.setVariable(n, e.intValue()); 
+			:}
+		|
+			SET LBRACE NAME:n simple_expr_list RBRACE simple_expr:e2 {:
+				ds.setConnector(n, numbers, e2.intValue());
+				numbers.removeAllElements();				
+			:}
+		|
+			SET LBRACKET simple_expr:e1 simple_expr:e2 RBRACKET simple_expr:e3 {:
+				ds.setDot(e1.intValue(), e2.intValue(), e3.intValue());
+			:}
+		|
+			REPEAT NAME:n simple_expr:e1 simple_expr:e2 {:
+				/* do nothing*/
+				parser myParser = (parser)CUP$parser$parser;
+				myParser.yyScan.doRepeat(false, n, e1.intValue(), e2.intValue(), ds);
+				/**/
+			:}
+		|
+			FOREVER {:
+				parser myParser = (parser)CUP$parser$parser;
+				myParser.yyScan.doRepeat(true, "", 0, 0, ds);
+			:}
+				
+		|
+			QUESTION:q simple_expr:e1 simple_expr:e2 {:
+				parser myParser = (parser)CUP$parser$parser;
+				myParser.yyScan.doConditional(q, e1.intValue(), e2.intValue(), ds);
+			:}
+		|
+			COMMANDNAME:c simple_expr_list {:
+				//for(int i=0;i<numbers.size();i++) {
+				//	System.out.println("Command ["+c+"] ("+i+") = "+((Integer)numbers.elementAt(i)).intValue());
+				//}
+				parser myParser = (parser)CUP$parser$parser;
+				myParser.yyScan.runCommand(c, numbers);
+				numbers.removeAllElements();				
+			:}
+		|
+			COMMANDNAME:c {:
+				//System.out.println("Command ["+c+"]");
+				parser myParser = (parser)CUP$parser$parser;
+				names.removeAllElements();				
+				myParser.yyScan.runCommand(c, names);				
+			:}
+		|
+			COMMAND name_list {:
+				//for(int i=0;i<names.size();i++) {
+				//	System.out.println("Command ! ("+i+") = "+(String)names.elementAt(i));
+				//}
+				parser myParser = (parser)CUP$parser$parser;
+				myParser.yyScan.saveCommand(names, ds);				
+				names.removeAllElements();				
+			:}
+		|
+			NUMBER name_list {:
+				//for(int i=0;i<names.size();i++) {
+				//	System.out.println("Command ! ("+i+") = "+(String)names.elementAt(i));
+				//}
+				parser myParser = (parser)CUP$parser$parser;
+				myParser.yyScan.saveFunction(names, ds);				
+				names.removeAllElements();				
+			:}
+		| 	
+			PAPER simple_expr:e {: ds.setPaper(e.intValue()); :}
+		|
+			PEN simple_expr:e {: ds.setPen(e.intValue()); :}
+		|
+			LINE simple_expr:e1 simple_expr:e2 simple_expr:e3 simple_expr:e4 {:
+				ds.drawLine(e1.intValue(), e2.intValue(), e3.intValue(), e4.intValue());
+			:}
+		| 
+			ANTIALIAS {: ds.setAntialias(); :}
+		| 
+			ALIAS {: ds.setAlias(); :}		
+		| 
+			ESCAPE {: 
+				parser myParser = (parser)CUP$parser$parser;
+				myParser.yyScan.doBreak();				
+			:}
+		| 
+			LBLOCK | RBLOCK /* do nothing for extra blocks, for now */
+		;
+
+simple_expr_list ::= simple_expr:e {: numbers.addElement(new Integer(e.intValue())); :}
+		| 
+			simple_expr_list simple_expr:e {: numbers.addElement(new Integer(e.intValue())); :}
+		;
+
+name_list ::= NAME:n {:	names.addElement(new String(n)); :}
+		| 
+			name_list NAME:n {: names.addElement(new String (n)); :}
+		;
+
+simple_expr ::= 
+			INTEGER:n {: RESULT = n; :}
+		|	NAME:n {: 
+				parser myParser = (parser)CUP$parser$parser;
+				RESULT = new Integer(myParser.yyScan.getVariable(n)); 
+			:}
+		|	LPAREN expr:e RPAREN {: RESULT = e; :}
+		|	LBRACE NAME:n simple_expr_list RBRACE	{: 
+				RESULT = new Integer (ds.getConnector(n, numbers)); 
+				numbers.removeAllElements();				
+			:}
+		|	LBRACKET simple_expr:e1 simple_expr:e2 RBRACKET	{:
+				RESULT = new Integer (ds.getDot(e1.intValue(), e2.intValue()));
+			:}
+		;
+
+expr ::= 	simple_expr:e {: RESULT = new Integer(e.intValue()); :}
+		|	expr:e1 PLUS expr:e2    
+			{: RESULT = new Integer(e1.intValue() + e2.intValue()); :} 
+		|	expr:e1 MINUS expr:e2    
+			{: RESULT = new Integer(e1.intValue() - e2.intValue()); :} 
+		|	expr:e1 TIMES expr:e2 
+			{: RESULT = new Integer(e1.intValue() * e2.intValue()); :} 
+		|	expr:e1 DIVIDE expr:e2 
+			{: RESULT = new Integer(e1.intValue() / e2.intValue()); :} 
+		|	MINUS expr:e             
+			{: RESULT = new Integer(0 - e.intValue()); :} 
+			%prec UMINUS
+		;

@@ -1,0 +1,56 @@
+Command spread x y r gray
+{
+   pen gray
+   set left (x-r)
+   set right (x+r)
+   set bot (y-r)
+   set top (y+r)
+   Line left bot right bot
+   Line right bot right top
+   Line right top left top
+   Line left top left bot
+}
+
+Command Field left bot right top gray
+{
+   Pen gray
+   Repeat V top bottom
+   {
+      Line left V right V
+   }
+}
+
+command drawTop
+{
+   repeat top 0 100
+   {
+      pen top
+      line top 90 top 100
+   }
+}
+
+Paper 0
+drawTop
+
+forever 
+{
+   bigger? <mouse 2> 90
+   {
+      set shade <mouse 1>
+      notsame? <mouse 3> 0
+      {
+         paper shade
+         drawTop
+      }
+      field 20 0 80 10 shade
+   }
+   same? <mouse 3> 0
+   {
+      set grow 0
+   }
+   notsame? <mouse 3> 0
+   {
+      spread <mouse 1> <mouse 2> grow shade
+      set grow (grow+1)
+   }
+}

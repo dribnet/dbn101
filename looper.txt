@@ -1,0 +1,61 @@
+paper 100
+// This is the main forever loop, which runs forever
+forever
+{
+   // This is the forever loop that runs until the mouse
+   // button is held down, then it escapes
+   forever
+   {
+      set x (x+1)
+      bigger? x 100
+      {
+         set x 0
+         set y (y+1)
+         bigger? y 100
+         {
+            set y 0
+            set val (val+10)
+            bigger? val 100
+            {
+               set val 0
+            }
+         }
+      }
+      set [x y] val
+      notsame? <mouse 3> 0
+      {
+         escape
+      }
+   }
+   set inc 1
+   // This is the forever loop that runs while the mouse button 
+   // is held down, then it escapes back to the beginning.
+   forever
+   {
+      set x (x-1)
+      smaller? x 0
+      {
+         set x 100
+         set y (y-1)
+         smaller? y 0
+         {
+            set y 100
+         }
+         set inc (inc+1)
+         bigger? inc 99
+         {
+            set inc 1
+         }
+      }
+      set val (val-inc)
+      smaller? val 0
+      {
+         set val (val+100)
+      }
+      set [x y] val
+      same? <mouse 3> 0
+      {
+         escape
+      }
+   }
+}

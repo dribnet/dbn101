@@ -1,0 +1,24 @@
+paper 60
+antialias
+
+command lineToOrigin x y
+{
+   line originX originY x y
+}
+
+command doStar
+{
+   repeat n 0 10
+   {
+      lineToOrigin 100 (n*10)
+   }
+}
+
+// our first star will be white
+pen 0
+doStar
+
+// now move the origin and make a black one
+set originY 60
+pen 100
+doStar

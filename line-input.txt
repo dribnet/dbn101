@@ -1,0 +1,50 @@
+// lines lines lines lines
+
+paper 0
+set p 100
+forever
+{
+  pen p
+  line x y <loc 1> <loc 2>
+  bigger? m 100
+   {
+      set m 0
+   }
+  set p (p-1) 
+  smaller? p 13
+   {
+       set p 100
+   }
+  same? state 3
+  {
+    set y (y-1)
+    same? y 0
+    {
+      set state 0
+    }
+  }
+  same? state 2
+  {
+    set x (x-1)
+    same? x 0
+    {
+      set state 3
+    }
+  }
+  same? state 1
+  {
+    set y (y+1)
+    same? y 100
+    {
+      set state 2
+    }
+  }
+  same? state 0
+  {
+    set x (x+1)
+    same? x 100
+    {
+      set state 1
+    }
+  }
+}
